@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KI-Sokratisches Gespräch</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #343541;
+            color: white;
+        }
+
+        .app {
+            max-width: 900px;
+            min-height: 100vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            background-color: #202123;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .status {
+            background: #2b2c38;
+            padding: 10px 20px;
+            font-size: 14px;
+            color: #cfd3dc;
+            border-bottom: 1px solid #444654;
+        }
+
+        .chat {
+            flex: 1;
+            overflow: visible !important;
+            height: auto !important;
+            padding: 20px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            border-radius: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            background-color: #19c37d;
+            margin-left: auto;
+            color: white;
+        }
+
+        .bot {
+            background-color: #444654;
+            margin-right: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            background-color: #40414f;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            background-color: #19c37d;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #15a46a;
+        }
+
+        .secondary {
+            background-color: #6b7280;
+        }
+
+        .secondary:hover {
+            background-color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <header>KI-Sokratisches Gespräch</header>
+
+    <div class="status" id="status">
+        Phase: Einstieg
+    </div>
+
+    <div class="chat" id="chat">
+        <div class="message bot">
+            Willkommen. Welches Thema möchtest du heute bearbeiten?
+        </div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="eingabe" placeholder="Schreibe deine Antwort...">
+        <button onclick="senden()">Senden</button>
+        <button class="secondary" onclick="speichereGespräch()">Gespräch speichern</button>
+        <button class="warning" onclick="exportPDF()">Als PDF exportieren</button>
+        <button class="secondary" onclick="ladeGespräch()">Gespräch laden</button>
+        <button class="secondary" onclick="neuStarten()">Neu</button>
+    </div>
+
+<script>
+    const gesprächsPhasen = [
+        {
+            phase: "Einstieg",
+            frage: "Welches Thema möchtest du heute bearbeiten?"
+        },
+        {
+            phase: "Konkretisierung",
+            frage: "Kannst du dazu ein konkretes Beispiel oder eine eigene Erfahrung nennen?"
+        },
+        {
+            phase: "Analyse",
+            frage: "Warum ist dieses Beispiel aus deiner Sicht bedeutsam?"
+        },
+        {
+            phase: "Begründung",
+            frage: "Welche Gründe sprechen für deine Sichtweise?"
+        },
+        {
+            phase: "Perspektivwechsel",
+            frage: "Welche Gegenposition könnte man dazu vertreten?"
+        },
+        {
+            phase: "Reflexion",
+            frage: "Welche Schlussfolgerung ziehst du nun aus deinen Überlegungen?"
+        }
+    ];
+
+    let aktuellePhase = 0;
+    let letzteBotFrage = gesprächsPhasen[0].frage;
+    let gesprächBeendet = false;
+
+    function sendeNachricht(text, klasse) {
+        const chat = document.getElementById("chat");
+        const nachricht = document.createElement("div");
+        nachricht.classList.add("message", klasse);
+        nachricht.innerText = text;
+        chat.appendChild(nachricht);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function statusAktualisieren() {
+        const status = document.getElementById("status");
+
+        if (gesprächBeendet) {
+            status.innerText = "Phase: Gespräch abgeschlossen";
+        } else {
+            status.innerText = "Phase: " + gesprächsPhasen[aktuellePhase].phase;
+        }
+    }
+
+    function antwortIstZuKurz(text) {
+        return text.trim().length < 8;
+    }
+
+    function istWiederholung(text) {
+        const sauber = text.trim().toLowerCase();
+        return sauber === "weiß nicht" ||
+               sauber === "keine ahnung" ||
+               sauber === "das habe ich schon gesagt" ||
+               sauber === "habe ich schon gesagt";
+    }
+
+    function nächsteBotAntwort(userText) {
+        const phase = gesprächsPhasen[aktuellePhase].phase;
+        const prüfung = prüfeAntwort(phase, userText);
+
+        if (!prüfung.ok) {
+            return prüfung.feedback;
+        }
+        
+        if (antwortIstZuKurz(userText)) {
+            return "Deine Antwort ist noch sehr kurz. Kannst du sie bitte etwas genauer ausführen?";
+        }
+
+        if (istWiederholung(userText)) {
+            return "Versuche bitte, einen Gedanken aus deiner letzten Antwort genauer zu erläutern. Was meinst du damit genauer?";
+        }
+
+        if (aktuellePhase < gesprächsPhasen.length - 1) {
+            aktuellePhase++;
+            letzteBotFrage = gesprächsPhasen[aktuellePhase].frage;
+            statusAktualisieren();
+            return letzteBotFrage;
+        }
+
+        gesprächBeendet = true;
+        statusAktualisieren();
+        return "Danke. Du hast nun eine vollständige Reflexion durchlaufen. Unser sokratisches Gespräch ist damit vorerst abgeschlossen.";
+    }
+
+    function senden() {
+        const eingabe = document.getElementById("eingabe");
+        const text = eingabe.value.trim();
+
+        if (text === "" || gesprächBeendet) {
+            return;
+        }
+
+        sendeNachricht(text, "user");
+        eingabe.value = "";
+
+        setTimeout(() => {
+            const botAntwort = nächsteBotAntwort(text);
+            sendeNachricht(botAntwort, "bot");
+        }, 400);
+
+    }
+    function speichereGespräch() {
+        const chatInhalt = document.getElementById("chat").innerHTML;
+
+        const daten = {
+            chat: chatInhalt,
+            phase: aktuellePhase,
+            beendet: gesprächBeendet
+        };
+
+        localStorage.setItem("sokratischesGespraech", JSON.stringify(daten));
+        alert("Das Gespräch wurde im Browser gespeichert.");
+    }
+
+    function ladeGespräch() {
+        const gespeichert = localStorage.getItem("sokratischesGespraech");
+
+        if (!gespeichert) {
+            alert("Es wurde noch kein Gespräch gespeichert.");
+            return;
+        }
+
+        const daten = JSON.parse(gespeichert);
+
+        document.getElementById("chat").innerHTML = daten.chat;
+        aktuellePhase = daten.phase;
+        gesprächBeendet = daten.beendet;
+
+        statusAktualisieren();
+    }
+
+    function exportPDF() {
+        window.print();
+    }
+
+    function neuStarten() {
+        const chat = document.getElementById("chat");
+        chat.innerHTML = `
+            <div class="message bot">
+                Willkommen. Welches Thema möchtest du heute bearbeiten?
+            </div>
+        `;
+
+        aktuellePhase = 0;
+        letzteBotFrage = gesprächsPhasen[0].frage;
+        gesprächBeendet = false;
+        statusAktualisieren();
+        document.getElementById("eingabe").value = "";
+    }
+
+    function enthältEinesVon(text, woerter) {
+    const t = text.toLowerCase();
+    return woerter.some(wort => t.includes(wort));
+}
+
+function prüfeAntwort(phase, text) {
+
+    const t = text.toLowerCase();
+
+    if (t.length < 12) {
+        return {
+            ok: false,
+            feedback: "Deine Antwort ist noch sehr kurz. Kannst du genauer formulieren?"
+        };
+    }
+
+    if (phase === "Konkretisierung") {
+
+        const hatBeispiel = enthältEinesVon(t, [
+            "zum beispiel",
+            "beispielsweise",
+            "eine situation",
+            "erfahrung"
+        ]);
+
+        if (!hatBeispiel) {
+            return {
+                ok: false,
+                feedback: "Ich sehe noch kein konkretes Beispiel. Kannst du eine Situation genauer beschreiben?"
+            };
+        }
+    }
+
+    if (phase === "Begründung") {
+
+        const hatBegruendung = enthältEinesVon(t, [
+            "weil",
+            "denn",
+            "deshalb",
+            "daher",
+            "ein grund"
+        ]);
+
+        if (!hatBegruendung) {
+            return {
+                ok: false,
+                feedback: "Du nennst eine Position, aber noch keine Begründung. Warum genau vertrittst du diese Sicht?"
+            };
+        }
+    }
+
+    return { ok: true };
+}
+
+    document.getElementById("eingabe").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            senden();
+        }
+    });
+
+    statusAktualisieren();
+</script>
+
+</body>
+</html>

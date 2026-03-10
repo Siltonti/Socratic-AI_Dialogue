@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KI-Sokratisches Chat-Interface</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #343541;
+            color: white;
+        }
+
+        .app {
+            max-width: 900px;
+            height: 100vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            background-color: #202123;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+
+        .user {
+            background-color: #19c37d;
+            margin-left: auto;
+            color: white;
+        }
+
+        .bot {
+            background-color: #444654;
+            margin-right: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            background-color: #40414f;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            background-color: #19c37d;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #15a46a;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <header>KI-Sokratisches Gespräch</header>
+
+    <div class="chat" id="chat">
+        <div class="message bot">
+            Willkommen. Welches Thema möchtest du heute bearbeiten?
+        </div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="eingabe" placeholder="Schreibe deine Antwort...">
+        <button onclick="senden()">Senden</button>
+    </div>
+</div>
+
+<script>
+    let frageNummer = 0;
+
+    const fragen = [
+"Welches konkrete Beispiel fällt dir zu diesem Thema ein?",
+"Warum ist dieses Beispiel aus deiner Sicht relevant?",
+"Welche Gründe sprechen für deine Position?",
+"Gibt es auch Argumente, die dagegen sprechen könnten?",
+"Wie könnte eine andere Person diese Situation interpretieren?",
+"Welche Schlussfolgerung ziehst du aus unserem Gespräch?"
+];
+
+    function sendeNachricht(text, klasse) {
+        const chat = document.getElementById("chat");
+
+        const nachricht = document.createElement("div");
+        nachricht.classList.add("message", klasse);
+        nachricht.innerText = text;
+
+        chat.appendChild(nachricht);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function senden() {
+        const eingabe = document.getElementById("eingabe");
+        const text = eingabe.value.trim();
+
+        if (text === "") {
+            return;
+        }
+
+        sendeNachricht(text, "user");
+        eingabe.value = "";
+
+        setTimeout(() => {
+            let antwort;
+
+            if (frageNummer < fragen.length) {
+    antwort = fragen[frageNummer];
+    frageNummer++;
+} else {
+    antwort = "Danke für deine Überlegungen. Unser Gespräch ist hier zunächst abgeschlossen.";
+}
+
+            sendeNachricht(antwort, "bot");
+        }, 500);
+    }
+
+    document.getElementById("eingabe").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            senden();
+        }
+    });
+</script>
+
+</body>
+</html>
